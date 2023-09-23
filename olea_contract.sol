@@ -70,14 +70,19 @@ contract Olea is ERC20, ERC20Snapshot, Ownable {
     uint256 currentTime = block.timestamp;
     require(currentTime >= lastInterestPaymentDate + 365 days, "Interest distribution period not met yet");
 
-    uint256 snapshotId = _snapshot(); // Take a snapshot
+    // Si on est après la date d'échéance, la période d'intérêt se termine à la date d'échéance
+    uint256 periodEnd = (currentTime > maturityDate) ? maturityDate : currentTime;
+    uint256 interestPeriod = periodEnd - lastInterestPaymentDate;
+
+    uint256 snapshotId = _snapshot(); // Prendre un snapshot
     emit SnapshotTaken(snapshotId);
 
     for (uint256 i = 0; i < bondHolders.length; i++) {
         address investor = bondHolders[i];
         uint256 balance = balanceOfAt(investor, snapshotId);
         if (balance > 0) {
-            uint256 interestAmount = (initialInvestments[investor] * interestRate) / 100;
+            // Calculer l'intérêt pour l'investisseur sur la base de la période d'intérêt
+            uint256 interestAmount = (initialInvestments[investor] * interestRate * interestPeriod) / (365 days * 100);
             usdc.transfer(investor, interestAmount);
             emit InterestPaid(investor, interestAmount);
         }
