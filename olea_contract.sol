@@ -2,79 +2,92 @@
 pragma solidity ^0.8.9;
 
 import "@openzeppelin/contracts@4.9.3/token/ERC20/ERC20.sol";
-import "@openzeppelin/contracts@4.9.3/token/ERC20/extensions/ERC20Burnable.sol";
+import "@openzeppelin/contracts@4.9.3/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts@4.9.3/access/Ownable.sol";
+import "@openzeppelin/contracts@4.9.3/token/ERC20/extensions/ERC20Snapshot.sol";
 
-contract Olea is ERC20, Ownable {
-    uint256 public constant BOND_PERCENTAGE = 1; // 1% annual bond distribution
-    uint256 public constant bond_price = 100;
+contract Olea is ERC20, ERC20Snapshot, Ownable {
+    uint256 public constant bond_percentage = 1; // 1% annual bond distribution
+    uint256 public bondPriceInUSDC;
+    uint256 public maturityDate;
+    uint256 public interestRate;
+    uint256 public lastInterestPaymentDate;
     uint256 public lastBondDistributionTime;
-    uint256 public maximumAmount;
-    //uint256 public total_Supply = 1000000;
-    
-    struct Lock {
-        uint256 amount;
-        bool issued25;
-        bool issued50;
-        bool issued75;
-        bool issued100;
+
+    IERC20 public usdc;
+
+    mapping(address => uint256) public initialInvestments;
+
+    event InterestPaid(address indexed investor, uint256 amount);
+    event BondMatured(address indexed investor, uint256 amount);
+    event SnapshotTaken(uint256 id);
+
+    address[] public bondHolders;
+
+    constructor(
+        uint256 _bondPriceInUSDC,
+        uint256 _maturityDate,
+        uint256 _interestRate,
+        address _usdcAddress
+    ) ERC20("GreenBond", "GB") {
+        bondPriceInUSDC = _bondPriceInUSDC;
+        maturityDate = _maturityDate;
+        interestRate = _interestRate;
+        lastInterestPaymentDate = block.timestamp;
+        usdc = IERC20(_usdcAddress);
+    }
+
+    function snapshot() public onlyOwner {
+        _snapshot();
     }
     
-    mapping(address => Lock) public locks;
-
-    constructor(uint256 _maximumAmount, address _usdcAddress) {
-        totalSupply = _maximumAmount; // Set the total supply during contract deployment
-        maximumAmount = _maximumAmount;
-        lastBondDistributionTime = block.timestamp;
-        usdc = IERC20(_usdcAddress); // Initialize the USDC token contract
+    function _beforeTokenTransfer(address from, address to, uint256 amount)
+        internal
+        override(ERC20, ERC20Snapshot)
+    {
+        super._beforeTokenTransfer(from, to, amount);
     }
 
-    function mint(address account, uint256 amount) public onlyOwner {
-        _mint(account, amount);
+    function buyBonds(uint256 usdcAmount) external {
+    require(usdcAmount == bondPriceInUSDC, "Please send the exact bond price in USDC");
+    usdc.transferFrom(msg.sender, address(this), usdcAmount);
+
+    if (balanceOf(msg.sender) == 0) {
+        bondHolders.push(msg.sender); // Ajouter à la liste seulement si c'est un nouvel acheteur
     }
 
-    function buyTokens(uint256 amount) external payable {
-        require(msg.value >= amount, "Insufficient ether sent");
-        _mint(msg.sender, amount);
+    _mint(msg.sender, 1); // 1 bond token for simplicity
+    initialInvestments[msg.sender] = usdcAmount;
     }
 
-    function distributeBonds() external onlyOwner { //Changer et distribuer en USDC et faire en sorte que le contrat stock des USDC
-        uint256 currentTime = block.timestamp;
-        require(currentTime >= lastBondDistributionTime + 365 days, "Bond distribution period not met yet");
+    function distributeInterest() external onlyOwner {
+    uint256 currentTime = block.timestamp;
+    require(currentTime >= lastInterestPaymentDate + 365 days, "Interest distribution period not met yet");
 
-        uint256 totalSupply = totalSupply();
-        uint256 bondAmount = (totalSupply * BOND_PERCENTAGE) / 100;
-        _mint(owner(), bondAmount);
+    uint256 snapshotId = _snapshot(); // Take a snapshot
+    emit SnapshotTaken(snapshotId);
 
-        lastBondDistributionTime = currentTime;
+    for (uint256 i = 0; i < bondHolders.length; i++) {
+        address investor = bondHolders[i];
+        uint256 balance = balanceOfAt(investor, snapshotId);
+        if (balance > 0) {
+            uint256 interestAmount = (initialInvestments[investor] * interestRate) / 100;
+            usdc.transfer(investor, interestAmount);
+            emit InterestPaid(investor, interestAmount);
+        }
     }
-    
-    function lockEther(uint256 amount) external payable {
-        require(msg.value == amount, "Incorrect Ether amount sent");
-        require(amount > 0, "Amount must be greater than zero");
-        require(amount <= maximumAmount, "Amount exceeds maximum amount");
+
+    lastInterestPaymentDate = currentTime;
+    }
+
+    function redeemBond() external {
+        require(block.timestamp >= maturityDate, "Bond has not matured yet");
+        uint256 bondAmount = balanceOf(msg.sender);
+        require(bondAmount > 0, "No bonds to redeem");
         
-        Lock storage userLock = locks[msg.sender];
-        userLock.amount += amount;
-        
-        if (userLock.amount >= (maximumAmount / 4) && !userLock.issued25) {
-            userLock.issued25 = true;
-            _mint(msg.sender, (maximumAmount / 4)); // Issue 25% of maximum amount as tokens
-        }
-        
-        if (userLock.amount >= (maximumAmount / 2) && !userLock.issued50) {
-            userLock.issued50 = true;
-            _mint(msg.sender, (maximumAmount / 4)); // Issue another 25% of maximum amount as tokens
-        }
-        
-        if (userLock.amount >= ((maximumAmount * 3) / 4) && !userLock.issued75) {
-            userLock.issued75 = true;
-            _mint(msg.sender, (maximumAmount / 4)); // Issue another 25% of maximum amount as tokens
-        }
-        
-        if (userLock.amount >= maximumAmount && !userLock.issued100) {
-            userLock.issued100 = true;
-            _mint(msg.sender, (maximumAmount / 4)); // Issue the remaining 25% of maximum amount as tokens
-        }
+        uint256 initialInvestment = initialInvestments[msg.sender];
+        usdc.transfer(msg.sender, initialInvestment);
+        _burn(msg.sender, bondAmount);
+        emit BondMatured(msg.sender, initialInvestment);
     }
 }
