@@ -14,7 +14,7 @@ contract Olea is ERC20, ERC20Snapshot, Ownable {
     uint256 public lastInterestPaymentDate;
     uint256 public lastBondDistributionTime;
     uint256 public max_seed_amount;
-    uint256 public total_supply;
+    //uint256 public total_supply;
 
     IERC20 public usdc;
 
@@ -46,24 +46,12 @@ contract Olea is ERC20, ERC20Snapshot, Ownable {
     function snapshot() public onlyOwner {
         _snapshot();
     }
-    
+
     function _beforeTokenTransfer(address from, address to, uint256 amount)
         internal
         override(ERC20, ERC20Snapshot)
     {
         super._beforeTokenTransfer(from, to, amount);
-    }
-
-    function buyBonds(uint256 usdcAmount) external {
-    require(usdcAmount == bondPriceInUSDC, "Please send the exact bond price in USDC");
-    usdc.transferFrom(msg.sender, address(this), usdcAmount);
-
-    if (balanceOf(msg.sender) == 0) {
-        bondHolders.push(msg.sender); // Ajouter à la liste seulement si c'est un nouvel acheteur
-    }
-
-    _mint(msg.sender, 1); // 1 bond token for simplicity
-    initialInvestments[msg.sender] = usdcAmount;
     }
 
     function distributeInterest() external onlyOwner {
@@ -138,7 +126,17 @@ contract Olea is ERC20, ERC20Snapshot, Ownable {
         assembly {
             mstore(owners, ownerCount)
         }
-
         return owners;
     }
+
+    function swapUsdcForOlea(uint256 usdcAmount) external {
+        require(usdcAmount > 0, "Amount must be greater than zero");
+        uint256 oleaAmount = usdcAmount * 10; // 10 USDC for 1 Olea token
+        require(balanceOf(address(this)) >= oleaAmount, "Not enough Olea tokens in the contract");
+
+        usdc.transferFrom(msg.sender, address(this), usdcAmount);
+
+        _transfer(address(this), msg.sender, oleaAmount);
+    }
+
 }
