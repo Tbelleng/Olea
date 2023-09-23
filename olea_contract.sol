@@ -110,15 +110,44 @@ contract Olea is ERC20, ERC20Snapshot, Ownable {
         InvestorToSeed(msg.sender, amountToSend);
     }
 
-    function swapEthForGB(uint256 GBAmount) external payable {
-    require(GBAmount > 0, "Amount must be greater than zero");
-    uint256 requiredEth = GBAmount / 10; // Pour 10 GB tokens, 1 ETH est requis
-    require(msg.value == requiredEth, "Incorrect ETH amount sent");
-    require(balanceOf(address(this)) >= GBAmount, "Not enough GB tokens in the contract");
 
-    _transfer(address(this), msg.sender, GBAmount);
+    //1 ETH for 10 GB tokens
+    uint256 public constant exchangeRate = 10;
+
+    // Event to log the swap
+    event TokensSwapped(address indexed user, uint256 tokensSwapped, uint256 ethReceived);
+
+    // Function to allow users to swap tokens for ETH
+    function swapTokensForEth(uint256 tokenAmount) external 
+    {
+        require(tokenAmount > 0, "Token amount must be greater than zero");
+        require(balanceOf(msg.sender) >= tokenAmount, "Not enough tokens in the user's balance");
+
+        // Calculate the ETH amount to send based on the exchange rate
+        uint256 ethAmount = tokenAmount / exchangeRate;
+
+        // Ensure the contract has enough ETH to perform the swap
+        require(address(this).balance >= ethAmount, "Not enough ETH in the contract");
+
+        // Transfer tokens from the user to the contract
+        _transfer(msg.sender, address(this), tokenAmount);
+
+        // Transfer ETH to the user
+        payable(msg.sender).transfer(ethAmount);
+
+        // Emit an event to log the swap
+        emit TokensSwapped(msg.sender, tokenAmount, ethAmount);
+
     }
+        /*function swapEthForGB(uint256 GBAmount) external payable 
+        {
+        require(GBAmount > 0, "Amount must be greater than zero");
+        uint256 requiredEth = GBAmount ; // Pour 1 GB tokens, 1 ETH est requis
+        require(msg.value == requiredEth, "Incorrect ETH amount sent");
+        require(balanceOf(address(this)) >= GBAmount, "Not enough GB tokens in the contract");
 
+        _transfer(address(this), msg.sender, GBAmount);
+    }*/
 
     function sendFound() external onlyOwner {
         uint32 count = 0;
@@ -128,7 +157,21 @@ contract Olea is ERC20, ERC20Snapshot, Ownable {
             _beforeTokenTransfer(owner(), bondHolders[count], total_amount);
         }
     }
-
     // Ajout d'une fonction pour permettre au contrat de recevoir de l'ETH
-    receive() external payable {}
+    //receive() external payable {}
+
+    // Function to deposit ETH
+    receive() external payable 
+    {
+        emit EtherReceived(msg.sender, msg.value);
+    }
+
+    // Function to withdraw Ether from the contract (only owner)
+    function withdrawEther(uint256 amount) external onlyOwner {
+        require(address(this).balance >= amount, "Insufficient contract balance");
+        payable(owner()).transfer(amount);
+    }
+
+    // Event to log received Ether
+    event EtherReceived(address indexed sender, uint256 value);
 }
