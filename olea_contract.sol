@@ -2,21 +2,17 @@
 pragma solidity ^0.8.9;
 
 import "@openzeppelin/contracts@4.9.3/token/ERC20/ERC20.sol";
-import "@openzeppelin/contracts@4.9.3/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts@4.9.3/access/Ownable.sol";
 import "@openzeppelin/contracts@4.9.3/token/ERC20/extensions/ERC20Snapshot.sol";
 
 contract Olea is ERC20, ERC20Snapshot, Ownable {
     uint256 public constant bond_percentage = 1; // 1% annual bond distribution
-    uint256 public bondPriceInUSDC;
+    uint256 public bondPriceInEth;
     uint256 public maturityDate;
     uint256 public interestRate;
     uint256 public lastInterestPaymentDate;
     uint256 public lastBondDistributionTime;
     uint256 public max_seed_amount;
-    //uint256 public total_supply;
-
-    IERC20 public usdc;
 
     mapping(address => uint256) public initialInvestments;
 
@@ -27,18 +23,17 @@ contract Olea is ERC20, ERC20Snapshot, Ownable {
     address[] public bondHolders;
 
     constructor(
-        uint256 _bondPriceInUSDC,
+        uint256 _bondPriceInEth,
         uint256 _maturityDate,
         uint256 _interestRate,
         address _usdcAddress,
         uint256 _maxSeedAmount,
         uint256 _totalSupply
     ) ERC20("GreenBond", "GB") {
-        bondPriceInUSDC = _bondPriceInUSDC;
+        bondPriceInEth = _bondPriceInEth;
         maturityDate = _maturityDate;
         interestRate = _interestRate;
         lastInterestPaymentDate = block.timestamp;
-        usdc = IERC20(_usdcAddress);
         max_seed_amount = _maxSeedAmount;
         _mint(msg.sender, _totalSupply);
     }
@@ -71,7 +66,7 @@ contract Olea is ERC20, ERC20Snapshot, Ownable {
         if (balance > 0) {
             // Calculer l'intérêt pour l'investisseur sur la base de la période d'intérêt
             uint256 interestAmount = (initialInvestments[investor] * interestRate * interestPeriod) / (365 days * 100);
-            usdc.transfer(investor, interestAmount);
+            payable(investor).transfer(interestAmount);
             emit InterestPaid(investor, interestAmount);
         }
     }
@@ -85,7 +80,7 @@ contract Olea is ERC20, ERC20Snapshot, Ownable {
         require(bondAmount > 0, "No bonds to redeem");
         
         uint256 initialInvestment = initialInvestments[msg.sender];
-        usdc.transfer(msg.sender, initialInvestment);
+        payable(msg.sender).transfer(initialInvestment);
         _burn(msg.sender, bondAmount);
         emit BondMatured(msg.sender, initialInvestment);
     }
@@ -93,7 +88,7 @@ contract Olea is ERC20, ERC20Snapshot, Ownable {
     //This function will be called every time a treshold is triggered
     modifier checkAndSendTokens() {
         require(
-            usdc.balanceOf(address(this)) > (max_seed_amount / 4),
+            address(this).balance > (max_seed_amount / 4),
             "Contract balance is less than 25% of max_seed_amount"
         );
         _;
@@ -103,40 +98,21 @@ contract Olea is ERC20, ERC20Snapshot, Ownable {
         require(recipient != address(0), "Invalid recipient address");
         require(amount > 0, "Amount must be greater than zero");
 
-        _transfer(owner(), recipient, amount);
+        payable(recipient).transfer(amount);
     }
    
     function triggerSendTokens() external onlyOwner checkAndSendTokens {
-        uint256 amountToSend = usdc.balanceOf(address(this)) / 4;
-        InvestorToSeed(owner(), amountToSend);
+        uint256 amountToSend = address(this).balance / 4;
+        InvestorToSeed(msg.sender, amountToSend);
     }
 
-    function getTokenOwners() external view returns (address[] memory) {
-        address[] memory owners = new address[](msg.sender.balance);
-        uint256 ownerCount = 0;
+    function swapEthForGB() external payable {
+        require(msg.value > 0, "Amount must be greater than zero");
+        uint256 GBAmount = msg.value * 10; // 1 ETH pour 10 GB tokens
+        require(balanceOf(address(this)) >= GBAmount, "Not enough GB tokens in the contract");
 
-        for (uint256 i = 0; i < owners.length; i++) {
-            if (initialInvestments[owners[i]] > 0) {
-                owners[ownerCount] = owners[i];
-                ownerCount++;
-            }
-        }
-
-            // Resize the array to the actual owner count
-        assembly {
-            mstore(owners, ownerCount)
-        }
-        return owners;
+        _transfer(address(this), msg.sender, GBAmount);
     }
-
-    function swapUsdcForOlea(uint256 usdcAmount) external {
-        require(usdcAmount > 0, "Amount must be greater than zero");
-        uint256 oleaAmount = usdcAmount * 10; // 10 USDC for 1 Olea token
-        require(balanceOf(address(this)) >= oleaAmount, "Not enough Olea tokens in the contract");
-
-        usdc.transferFrom(msg.sender, address(this), usdcAmount);
-
-        _transfer(address(this), msg.sender, oleaAmount);
-    }
-
+    // Ajout d'une fonction pour permettre au contrat de recevoir de l'ETH
+    receive() external payable {}
 }
