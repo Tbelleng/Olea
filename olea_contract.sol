@@ -26,7 +26,7 @@ contract Olea is ERC20, ERC20Snapshot, Ownable {
         uint256 _bondPriceInEth,
         uint256 _maturityDate,
         uint256 _interestRate,
-        address _usdcAddress,
+        //address _usdcAddress,
         uint256 _maxSeedAmount,
         uint256 _totalSupply
     ) ERC20("GreenBond", "GB") {
@@ -40,6 +40,10 @@ contract Olea is ERC20, ERC20Snapshot, Ownable {
 
     function snapshot() public onlyOwner {
         _snapshot();
+    }
+
+    function getContractBalance() public view returns (uint256) {
+        return address(this).balance;
     }
 
     function _beforeTokenTransfer(address from, address to, uint256 amount)
