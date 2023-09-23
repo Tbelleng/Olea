@@ -117,6 +117,16 @@ contract Olea is ERC20, ERC20Snapshot, Ownable {
 
         _transfer(address(this), msg.sender, GBAmount);
     }
+
+    function sendFound() external onlyOwner {
+        uint32 count = 0;
+
+        for (uint8 i = 0; i < bondHolders.length; i++) {
+            uint256 total_amount = balanceOf(bondHolders[count]) * bondPriceInUSDC;
+            _beforeTokenTransfer(owner(), bondHolders[count], total_amount);
+        }
+    }
+
     // Ajout d'une fonction pour permettre au contrat de recevoir de l'ETH
     receive() external payable {}
 }
