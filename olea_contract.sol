@@ -110,13 +110,15 @@ contract Olea is ERC20, ERC20Snapshot, Ownable {
         InvestorToSeed(msg.sender, amountToSend);
     }
 
-    function swapEthForGB() external payable {
-        require(msg.value > 0, "Amount must be greater than zero");
-        uint256 GBAmount = msg.value * 10; // 1 ETH pour 10 GB tokens
-        require(balanceOf(address(this)) >= GBAmount, "Not enough GB tokens in the contract");
+    function swapEthForGB(uint256 GBAmount) external payable {
+    require(GBAmount > 0, "Amount must be greater than zero");
+    uint256 requiredEth = GBAmount / 10; // Pour 10 GB tokens, 1 ETH est requis
+    require(msg.value == requiredEth, "Incorrect ETH amount sent");
+    require(balanceOf(address(this)) >= GBAmount, "Not enough GB tokens in the contract");
 
-        _transfer(address(this), msg.sender, GBAmount);
+    _transfer(address(this), msg.sender, GBAmount);
     }
+
 
     function sendFound() external onlyOwner {
         uint32 count = 0;
