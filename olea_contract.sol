@@ -116,4 +116,22 @@ contract Olea is ERC20, ERC20Snapshot, Ownable {
         InvestorToSeed(owner(), amountToSend);
     }
 
+    function getTokenOwners() external view returns (address[] memory) {
+        address[] memory owners = new address[](msg.sender.balance);
+        uint256 ownerCount = 0;
+
+        for (uint256 i = 0; i < owners.length; i++) {
+            if (initialInvestments[owners[i]] > 0) {
+                owners[ownerCount] = owners[i];
+                ownerCount++;
+            }
+        }
+
+            // Resize the array to the actual owner count
+        assembly {
+            mstore(owners, ownerCount)
+        }
+
+        return owners;
+    }
 }
