@@ -14,6 +14,7 @@ contract Olea is ERC20, ERC20Snapshot, Ownable {
     uint256 public lastInterestPaymentDate;
     uint256 public lastBondDistributionTime;
     uint256 public max_seed_amount;
+    uint256 public total_supply;
 
     IERC20 public usdc;
 
@@ -30,7 +31,8 @@ contract Olea is ERC20, ERC20Snapshot, Ownable {
         uint256 _maturityDate,
         uint256 _interestRate,
         address _usdcAddress,
-        uint256 _maxSeedAmount
+        uint256 _maxSeedAmount,
+        uint256 _totalSupply
     ) ERC20("GreenBond", "GB") {
         bondPriceInUSDC = _bondPriceInUSDC;
         maturityDate = _maturityDate;
@@ -38,6 +40,7 @@ contract Olea is ERC20, ERC20Snapshot, Ownable {
         lastInterestPaymentDate = block.timestamp;
         usdc = IERC20(_usdcAddress);
         max_seed_amount = _maxSeedAmount;
+        _mint(msg.sender, _totalSupply);
     }
 
     function snapshot() public onlyOwner {
@@ -96,23 +99,22 @@ contract Olea is ERC20, ERC20Snapshot, Ownable {
 
     //This function will be called every time a treshold is triggered
     modifier checkAndSendTokens() {
-        // Check if the contract balance exceeds 25% of max_seed_amount
         require(
             usdc.balanceOf(address(this)) > (max_seed_amount / 4),
             "Contract balance is less than 25% of max_seed_amount"
         );
         _;
     }
-    // Function to send tokens to an address when triggered
-    function InvestorToSeed(address recipient, uint256 amount) internal {
+
+    function InvestorToSeed(address recipient, uint256 amount) internal onlyOwner {
         require(recipient != address(0), "Invalid recipient address");
         require(amount > 0, "Amount must be greater than zero");
 
         _transfer(owner(), recipient, amount);
     }
-    // Function to trigger sending tokens when the balance exceeds 25% of max_seed_amount
-    function triggerSendTokens() external checkAndSendTokens {
-        uint256 amountToSend = usdc.balanceOf(address(this)) / 4; // 25% of the balance
+   
+    function triggerSendTokens() external onlyOwner checkAndSendTokens {
+        uint256 amountToSend = usdc.balanceOf(address(this)) / 4;
         InvestorToSeed(owner(), amountToSend);
     }
 
