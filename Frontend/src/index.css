@@ -1,0 +1,35 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  /* body {
+    @apply font-primary bg-darkblue text-white leading-normal;
+  } */
+  .h3 {
+    @apply text-[22px] lg:text-[32px] font-bold;
+  }
+  .btn {
+    @apply bg-green h-[60px] px-4 rounded-full hover:bg-green-hover transition flex items-center text-lg font-medium outline-none text-white;
+    /* Update background and hover background color to green */
+  }
+  .section {
+    @apply py-12 lg:py-24;
+  }
+  .section-title {
+    @apply text-2xl lg:text-[40px] font-bold leading-normal mb-6;
+  }
+  .section-subtitle {
+    @apply mt-6 mb-8 text-slate-600;
+  }
+  .input,
+  .select {
+    @apply outline-none w-full border-b border-gray text-slate-600 h-[38px] text-xl;
+  }
+  .input {
+    @apply lg:max-w-[410px] bg-transparent;
+  }
+  .select {
+    @apply lg:max-w-[200px] cursor-pointer rounded-2xl;
+  }
+}
