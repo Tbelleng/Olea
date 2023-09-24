@@ -1,18 +1,24 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.9;
 
+// Eloa token contract, this contract is used as an example
+// Contract authors :
+    //Lucien (https://github.com/lucienfer)
+    //Thomas (https://github.com/0xTrinityy)
+    //Axel (https://github.com/axelizsak)
+
 import "@openzeppelin/contracts@4.9.3/token/ERC20/ERC20.sol";
 import "@openzeppelin/contracts@4.9.3/access/Ownable.sol";
 import "@openzeppelin/contracts@4.9.3/token/ERC20/extensions/ERC20Snapshot.sol";
 
 contract Olea is ERC20, ERC20Snapshot, Ownable {
-    uint256 public constant bond_percentage = 1; // 1% annual bond distribution
-    uint256 public bondPriceInEth;
-    uint256 public maturityDate;
+    uint256 public constant bond_percentage = 1; // Here we set the percentage of the bond that will be distributed to the investors
+    uint256 public bondPriceInEth; // Price of the bond in ETH
+    uint256 public maturityDate; // Expiration date of the bond
     uint256 public interestRate;
-    uint256 public lastInterestPaymentDate;
-    uint256 public lastBondDistributionTime;
-    uint256 public max_seed_amount;
+    uint256 public lastInterestPaymentDate; //Interest payment date
+    uint256 public lastBondDistributionTime; //Bond time distribution
+    uint256 public max_seed_amount; // Max amount that the seed want to raise
 
     mapping(address => uint256) public initialInvestments;
 
@@ -22,11 +28,11 @@ contract Olea is ERC20, ERC20Snapshot, Ownable {
 
     address[] public bondHolders;
 
+    // In this section, we define the constructor of the contract and all the value that we will be used in as parameters for the token.
     constructor(
         uint256 _bondPriceInEth,
         uint256 _maturityDate,
         uint256 _interestRate,
-        //address _usdcAddress,
         uint256 _maxSeedAmount,
         uint256 _totalSupply
     ) ERC20("GreenBond", "GB") {
@@ -38,11 +44,13 @@ contract Olea is ERC20, ERC20Snapshot, Ownable {
         _mint(msg.sender, _totalSupply);
     }
 
-    function snapshot() public onlyOwner {
+    function snapshot() public onlyOwner
+    {
         _snapshot();
     }
 
-    function getContractBalance() public view returns (uint256) {
+    function getContractBalance() public view returns (uint256) 
+    {
         return address(this).balance;
     }
 
@@ -57,18 +65,19 @@ contract Olea is ERC20, ERC20Snapshot, Ownable {
     uint256 currentTime = block.timestamp;
     require(currentTime >= lastInterestPaymentDate + 365 days, "Interest distribution period not met yet");
 
-    // Si on est après la date d'échéance, la période d'intérêt se termine à la date d'échéance
+    // interest period computing
     uint256 periodEnd = (currentTime > maturityDate) ? maturityDate : currentTime;
     uint256 interestPeriod = periodEnd - lastInterestPaymentDate;
 
-    uint256 snapshotId = _snapshot(); // Prendre un snapshot
+    uint256 snapshotId = _snapshot();
     emit SnapshotTaken(snapshotId);
 
-    for (uint256 i = 0; i < bondHolders.length; i++) {
+    for (uint256 i = 0; i < bondHolders.length; i++) 
+    {
         address investor = bondHolders[i];
         uint256 balance = balanceOfAt(investor, snapshotId);
         if (balance > 0) {
-            // Calculer l'intérêt pour l'investisseur sur la base de la période d'intérêt
+            // Calculate the interest for the investor based on the interest period
             uint256 interestAmount = (initialInvestments[investor] * interestRate * interestPeriod) / (365 days * 100);
             payable(investor).transfer(interestAmount);
             emit InterestPaid(investor, interestAmount);
@@ -78,7 +87,8 @@ contract Olea is ERC20, ERC20Snapshot, Ownable {
     lastInterestPaymentDate = currentTime;
     }
 
-    function redeemBond() external {
+    function redeemBond() external 
+    {
         require(block.timestamp >= maturityDate, "Bond has not matured yet");
         uint256 bondAmount = balanceOf(msg.sender);
         require(bondAmount > 0, "No bonds to redeem");
@@ -89,8 +99,9 @@ contract Olea is ERC20, ERC20Snapshot, Ownable {
         emit BondMatured(msg.sender, initialInvestment);
     }
 
-    //This function will be called every time a treshold is triggered
-    modifier checkAndSendTokens() {
+    //This function will be called every time a treshold is triggered, in order to issue interest to the investors
+    modifier checkAndSendTokens() 
+    {
         require(
             address(this).balance > (max_seed_amount / 4),
             "Contract balance is less than 25% of max_seed_amount"
@@ -98,7 +109,8 @@ contract Olea is ERC20, ERC20Snapshot, Ownable {
         _;
     }
 
-    function InvestorToSeed(address recipient, uint256 amount) internal onlyOwner {
+    function InvestorToSeed(address recipient, uint256 amount) internal onlyOwner 
+    {
         require(recipient != address(0), "Invalid recipient address");
         require(amount > 0, "Amount must be greater than zero");
 
@@ -111,7 +123,7 @@ contract Olea is ERC20, ERC20Snapshot, Ownable {
     }
 
 
-    //1 ETH for 10 GB tokens
+    //1 ETH for 10 Eloa (GreenBond tokens) as example
     uint256 public constant exchangeRate = 10;
 
     // Event to log the swap
@@ -123,42 +135,30 @@ contract Olea is ERC20, ERC20Snapshot, Ownable {
         require(tokenAmount > 0, "Token amount must be greater than zero");
         require(balanceOf(msg.sender) >= tokenAmount, "Not enough tokens in the user's balance");
 
-        // Calculate the ETH amount to send based on the exchange rate
         uint256 ethAmount = tokenAmount / exchangeRate;
 
         // Ensure the contract has enough ETH to perform the swap
         require(address(this).balance >= ethAmount, "Not enough ETH in the contract");
 
-        // Transfer tokens from the user to the contract
         _transfer(msg.sender, address(this), tokenAmount);
 
-        // Transfer ETH to the user
         payable(msg.sender).transfer(ethAmount);
 
-        // Emit an event to log the swap
         emit TokensSwapped(msg.sender, tokenAmount, ethAmount);
 
     }
-        /*function swapEthForGB(uint256 GBAmount) external payable 
-        {
-        require(GBAmount > 0, "Amount must be greater than zero");
-        uint256 requiredEth = GBAmount ; // Pour 1 GB tokens, 1 ETH est requis
-        require(msg.value == requiredEth, "Incorrect ETH amount sent");
-        require(balanceOf(address(this)) >= GBAmount, "Not enough GB tokens in the contract");
 
-        _transfer(address(this), msg.sender, GBAmount);
-    }*/
-
-    function sendFound() external onlyOwner {
+    function sendFound() external onlyOwner
+    {
         uint32 count = 0;
 
-        for (uint8 i = 0; i < bondHolders.length; i++) {
+        for (uint8 i = 0; i < bondHolders.length; i++) 
+        {
             uint256 total_amount = balanceOf(bondHolders[count]) * bondPriceInEth;
             _beforeTokenTransfer(owner(), bondHolders[count], total_amount);
         }
     }
-    // Ajout d'une fonction pour permettre au contrat de recevoir de l'ETH
-    //receive() external payable {}
+    // Allowing contract to receive ETH
 
     // Function to deposit ETH
     receive() external payable 
@@ -174,4 +174,6 @@ contract Olea is ERC20, ERC20Snapshot, Ownable {
 
     // Event to log received Ether
     event EtherReceived(address indexed sender, uint256 value);
+
+
 }
