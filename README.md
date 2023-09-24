@@ -16,6 +16,8 @@
 
 Olea is a revolutionary Comprehensive Green Bonds Ecosystem that leverages the power of blockchain technology, specifically Ethereum and Starknet, to promote and facilitate investments in environmentally friendly projects. This ecosystem is designed to bring full transparency and accessibility to the world of green bonds, enabling everyone to participate in and support groundbreaking environmental initiatives.
 
+🚧 Build During Hackin'Dau (Dauphine Fintech hackathon - September 2023) 🚧
+
 ## Features
 
 ### Blockchain Transparency
