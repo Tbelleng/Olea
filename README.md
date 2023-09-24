@@ -37,7 +37,7 @@ To start using Olea, follow these steps:
 1. **Running the website locally**: ```npm ci``` and then ```npm start```.
   
 2. **Deploy and run the smart contract** : Implement the contract and dependencies directly in an ethereum based IDE like remix or truffle, ```compile```
-the contract, then ```deploy``` it and add the parameters that you want for the contract value (Keep in mind that you have to use a wallet like metamask, smartWallet..etc"
+the contract, then ```deploy``` it and add the parameters that you want for the contract value (Keep in mind that you have to use a wallet like metamask, smartWallet..etc).
 
 ## Contributing
 
