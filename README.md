@@ -16,6 +16,9 @@
 
 🌱 Olea is a revolutionary Comprehensive Green Bonds Ecosystem that leverages the power of blockchain technology, specifically Ethereum and Starknet, to promote and facilitate investments in environmentally friendly projects. This ecosystem is designed to bring full transparency and accessibility to the world of green bonds, enabling everyone to participate in and support groundbreaking environmental initiatives.
 
+The project is based on Ethereum network but it will be also deployed on Starknet, using Cairo, in order to maximize the investors, seeds and users experience by decreasing fees thanks to 
+Layer 2 (more is comming when the contract will be uploaded directly on Madara, an App-chain System based on starknet).
+
 🚧 Build During Hackin'Dau (Dauphine Fintech hackathon - September 2023) 🚧
 
 ## Features
