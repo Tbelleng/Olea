@@ -20,6 +20,7 @@ The project is based on Ethereum network but it will be also deployed on Starkne
 Layer 2 (more is comming when the contract will be uploaded directly on Madara, an App-chain System based on starknet).
 
 🚧 Build During Hackin'Dau (Dauphine Fintech hackathon - September 2023) 🚧
+🥉 3rd Price in Finance 
 
 ## Features
 
