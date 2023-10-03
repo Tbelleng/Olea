@@ -66,7 +66,7 @@ Let's join forces and build a greener, more sustainable future with Olea!
 Contributor :
   - Lucien (https://github.com/lucienfer)
   - Imed (https://github.com/imed57)
-  - Thomas (https://github.com/0xTrinityy)
+  - Thomas (https://github.com/Tbelleng)
   - Axel (https://github.com/axelizsak)
   - Axwell (https://github.com/axwellllll)
 
